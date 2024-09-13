@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "redmine-exporter"
+version = "0.1.0"
+description = "A prometheus compatible metrics exporter for Redmine"
+authors = ["Kienan Stewart <kstewart@efficios.com>"]
+license = "GPLv2"
+readme = "README.md"
+packages = [{include = "redmine-exporter"}]
+keywords = ["prometheus", "redmine"]
+
+[tool.black]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+python-redmine = "^2.5.0"
+prometheus-client = "^0.20.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
