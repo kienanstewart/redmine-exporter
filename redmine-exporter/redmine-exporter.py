@@ -51,10 +51,15 @@ class RedmineCollector(prometheus_client.registry.Collector):
             include=["trackers", "issue_categories"]
         )
         g1 = prometheus_client.core.GaugeMetricFamily(
-            "projects_total", "Project Count", labels=["public_state"]
+            "projects_total", "Project Count", labels=["instance_url", "public_state"]
         )
-        g1.add_metric(["private"], len(projects.filter(is_public=False)))
-        g1.add_metric(["public"], len(projects.filter(is_public=True)))
+        g1.add_metric(
+            [self.config["REDMINE_URL"], "private"],
+            len(projects.filter(is_public=False)),
+        )
+        g1.add_metric(
+            [self.config["REDMINE_URL"], "public"], len(projects.filter(is_public=True))
+        )
         yield g1
 
         if len(self.config["ISSUES_FOR_PROJECTS"]) == 0:
@@ -64,6 +69,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
             "issues_total",
             "Issue Count",
             labels=[
+                "instance_url",
                 "project_id",
                 "project_name",
                 "tracker_id",
@@ -97,6 +103,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
                     try:
                         g2.add_metric(
                             [
+                                self.config["REDMINE_URL"],
                                 str(project.id),
                                 project.name,
                                 str(tracker.id),
