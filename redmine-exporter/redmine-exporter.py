@@ -178,6 +178,6 @@ if __name__ == "__main__":
     redmine_collector = RedmineCollector(config)
     prometheus_client.core.REGISTRY.register(redmine_collector)
     server, server_thread = prometheus_client.start_http_server(
-        9169, addr=config["BIND_ADDRESS"]
+        port=config["LISTEN_PORT"], addr=config["BIND_ADDRESS"]
     )
     server_thread.join()
