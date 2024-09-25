@@ -145,9 +145,6 @@ def _default_config():
         "REDMINE_PASSWORD": os.getenv("REDMINE_PASSWORD", ""),
         "REDMINE_URL": os.getenv("REDMINE_URL", ""),
         "REDMINE_USER": os.getenv("REDMINE_USER", ""),
-        "REDMINE_VERSION": os.getenv("REDMINE_VERSION"),
-        "TLS_VERIFY": bool(os.getenv("TLS_VERIFY", True)),
-        "CACHE_TIME_SECONDS": int(os.getenv("CACHE_TIME_SECONDS", "0")),
         "ISSUES_FOR_PROJECTS": [
             x for x in os.getenv("ISSUES_FOR_PROJECTS", "").split(",") if x != ""
         ],
