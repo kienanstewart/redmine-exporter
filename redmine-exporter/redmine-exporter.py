@@ -139,6 +139,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
 
 def _default_config():
     return {
+        "BIND_ADDRESS": os.getenv("BIND_ADDRESS", "localhost"),
         "LISTEN_PORT": int(os.getenv("LISTEN_PORT", "9169")),
         "REDMINE_API_KEY": os.getenv("REDMINE_API_KEY", ""),
         "REDMINE_PASSWORD": os.getenv("REDMINE_PASSWORD", ""),
@@ -176,5 +177,7 @@ if __name__ == "__main__":
     prometheus_client.REGISTRY.unregister(prometheus_client.PROCESS_COLLECTOR)
     redmine_collector = RedmineCollector(config)
     prometheus_client.core.REGISTRY.register(redmine_collector)
-    server, server_thread = prometheus_client.start_http_server(9169)
+    server, server_thread = prometheus_client.start_http_server(
+        9169, addr=config["BIND_ADDRESS"]
+    )
     server_thread.join()
