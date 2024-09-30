@@ -44,29 +44,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
 
         # Test connection?
 
-    def collect(self):
-        """ """
-        self.connect()
-        projects = self.redmine_connection.project.all(
-            include=["trackers", "issue_categories"]
-        )
-        g1 = prometheus_client.core.GaugeMetricFamily(
-            "redmine_projects_total",
-            "Redmine Project Count",
-            labels=["instance_url", "public_state"],
-        )
-        g1.add_metric(
-            [self.config["REDMINE_URL"], "private"],
-            len(projects.filter(is_public=False)),
-        )
-        g1.add_metric(
-            [self.config["REDMINE_URL"], "public"], len(projects.filter(is_public=True))
-        )
-        yield g1
-
-        if len(self.config["ISSUES_FOR_PROJECTS"]) == 0:
-            return
-
+    def _redmine_issues_total(self):
         g2 = prometheus_client.core.GaugeMetricFamily(
             "redmine_issues_total",
             "Redmine Issue Count",
@@ -80,8 +58,17 @@ class RedmineCollector(prometheus_client.registry.Collector):
                 "status_name",
             ],
         )
+
+        if len(self.config["ISSUES_FOR_PROJECTS"]) == 0:
+            return g2
+
+        projects = self.redmine_connection.project.all(
+            include=["trackers", "issue_categories"]
+        )
         statuses = self.redmine_connection.issue_status.all()
         trackers = self.redmine_connection.tracker.all()
+
+        metrics_added = False
         for project in projects:
             if not (
                 project.name in self.config["ISSUES_FOR_PROJECTS"]
@@ -121,6 +108,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
                                 )
                             ),
                         )
+                        metrics_added = True
                     except Exception as e:
                         logging.critical(
                             project.id,
@@ -130,7 +118,31 @@ class RedmineCollector(prometheus_client.registry.Collector):
                             str(e),
                         )
                         break
-        yield g2
+        return g2
+
+    def _redmine_projects_total(self):
+        projects = self.redmine_connection.project.all(
+            include=["trackers", "issue_categories"]
+        )
+        g1 = prometheus_client.core.GaugeMetricFamily(
+            "redmine_projects_total",
+            "Redmine Project Count",
+            labels=["instance_url", "public_state"],
+        )
+        g1.add_metric(
+            [self.config["REDMINE_URL"], "private"],
+            len(projects.filter(is_public=False)),
+        )
+        g1.add_metric(
+            [self.config["REDMINE_URL"], "public"], len(projects.filter(is_public=True))
+        )
+        return g1
+
+    def collect(self):
+        """ """
+        self.connect()
+        yield self._redmine_projects_total()
+        yield self._redmine_issues_total()
 
     def describe(self):
         """ """
