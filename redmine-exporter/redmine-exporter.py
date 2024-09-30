@@ -4,6 +4,7 @@
 """
 """
 
+import datetime
 import logging
 import os
 
@@ -120,6 +121,70 @@ class RedmineCollector(prometheus_client.registry.Collector):
                         break
         return g2
 
+    def _redmine_issue_age(self):
+        gauge = prometheus_client.core.GaugeMetricFamily(
+            "redmine_issue_age",
+            "Redmine Issue Age",
+            labels=[
+                "instance_url",
+                "project_id",
+                "project_name",
+                "issue_id",
+                "tracker_id",
+                "tracker_name",
+                "status_id",
+                "status_name",
+                "priority_id",
+                "priority_name",
+                "age_type",  # UpdatedOn, CreatedOn
+            ],
+        )
+        # Use the same time for the stat
+        t = datetime.datetime.now()
+        for project_name in self.config["ISSUES_FOR_PROJECTS"]:
+            try:
+                project = self.redmine_connection.project.get(project_name)
+            except:
+                logging.info("Project name or ID '%s' not found", project_name)
+                continue
+            issues = self.redmine_connection.issue.filter(
+                project_id=project.id, status_id="open", include=["journals"]
+            )
+            for issue in issues:
+                gauge.add_metric(
+                    [
+                        self.config["REDMINE_URL"],
+                        str(project.id),
+                        project.name,
+                        str(issue.id),
+                        str(issue.tracker.id),
+                        issue.tracker.name,
+                        str(issue.status.id),
+                        issue.status.name,
+                        str(issue.priority.id),
+                        issue.priority.name,
+                        "UpdatedOn",
+                    ],
+                    (t - issue.updated_on).days,
+                )
+                gauge.add_metric(
+                    [
+                        self.config["REDMINE_URL"],
+                        str(project.id),
+                        project.name,
+                        str(issue.id),
+                        str(issue.tracker.id),
+                        issue.tracker.name,
+                        str(issue.status.id),
+                        issue.status.name,
+                        str(issue.priority.id),
+                        issue.priority.name,
+                        "CreatedOn",
+                    ],
+                    (t - issue.created_on).days,
+                )
+        return gauge
+
     def _redmine_projects_total(self):
         projects = self.redmine_connection.project.all(
             include=["trackers", "issue_categories"]
@@ -143,6 +208,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
         self.connect()
         yield self._redmine_projects_total()
         yield self._redmine_issues_total()
+        yield self._redmine_issue_age()
 
     def describe(self):
         """ """
