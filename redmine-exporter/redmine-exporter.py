@@ -60,27 +60,16 @@ class RedmineCollector(prometheus_client.registry.Collector):
             ],
         )
 
-        if len(self.config["ISSUES_FOR_PROJECTS"]) == 0:
-            return g2
-
-        projects = self.redmine_connection.project.all(
-            include=["trackers", "issue_categories"]
-        )
         statuses = self.redmine_connection.issue_status.all()
-        trackers = self.redmine_connection.tracker.all()
-
-        metrics_added = False
-        for project in projects:
-            if not (
-                project.name in self.config["ISSUES_FOR_PROJECTS"]
-                or str(project.id) in self.config["ISSUES_FOR_PROJECTS"]
-            ):
-                logging.info(
-                    "Project '{}' id '{}' not in issues_for_projects list".format(
-                        project.name, project.id
-                    )
+        for project_name in self.config["ISSUES_FOR_PROJECTS"]:
+            try:
+                project = self.redmine_connection.project.get(
+                    project_name, include=["trackers", "issue_categories"]
                 )
+            except:
+                logging.warning("Project name or ID '%s' not found", project_name)
                 continue
+
             if "issue_tracking" not in project.enabled_modules:
                 logging.info(
                     "Project '{}' id '{}' not not have issue_tracking enabled".format(
@@ -88,7 +77,8 @@ class RedmineCollector(prometheus_client.registry.Collector):
                     )
                 )
                 continue
-            for tracker in trackers:
+
+            for tracker in project.trackers:
                 for status in statuses:
                     try:
                         g2.add_metric(
@@ -109,7 +99,6 @@ class RedmineCollector(prometheus_client.registry.Collector):
                                 )
                             ),
                         )
-                        metrics_added = True
                     except Exception as e:
                         logging.critical(
                             project.id,
@@ -145,7 +134,7 @@ class RedmineCollector(prometheus_client.registry.Collector):
             try:
                 project = self.redmine_connection.project.get(project_name)
             except:
-                logging.info("Project name or ID '%s' not found", project_name)
+                logging.warning("Project name or ID '%s' not found", project_name)
                 continue
             issues = self.redmine_connection.issue.filter(
                 project_id=project.id, status_id="open", include=["journals"]
